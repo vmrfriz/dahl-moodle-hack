@@ -82,6 +82,26 @@ class Moodle
     }
 
     /**
+     * Получение списка курсов
+     *
+     * @return array
+     */
+    public function get_courses(): array {
+        $body = $this->http('GET', 'http://moodle.dahluniver.ru/my/')->body;
+        $links = str_get_html($body)->find('ul#dropdownmain-navigation0 li a.dropdown-item');
+        $data = array();
+        foreach ($links as $link) {
+            preg_match('/view\.php\?id=(\d+)/', $link->href, $id_match);
+            $data[] = [
+                'id' => $id_match[1],
+                'href' => $link->href,
+                'title' => $link->title
+            ];
+        }
+        return $data;
+    }
+
+    /**
      * Получить одноразовый токен для входа по логину+паролю
      *
      * @return string Параметр logintoken формы авторизации
