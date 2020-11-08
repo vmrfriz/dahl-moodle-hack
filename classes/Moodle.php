@@ -102,6 +102,34 @@ class Moodle
     }
 
     /**
+     * Получение результатов тестов по id курса
+     *
+     * @param integer $course_id
+     * @return array
+     */
+    public function get_course_tests(int $course_id): array {
+        $body = $this->http('GET', 'http://moodle.dahluniver.ru/grade/report/user/index.php?id=' . $course_id)->body;
+        $rows = str_get_html($body)->find('table tbody tr');
+        $data = array();
+        foreach ($rows as $row) {
+            $img = $row->find('th a img', 0);
+            if (!$img || mb_strtolower($img->alt) !== 'тест') continue;
+            $link = $row->find('th a', 0);
+            $percentage = floatval(preg_replace(['/[^\d,]/', '/,/'], ['', '.'], $row->find('td.column-percentage', 0)->plaintext));
+            $grade = floatval(preg_replace(['/[^\d,]/', '/,/'], ['', '.'], $row->find('td.column-grade', 0)->plaintext));
+            $range = $row->find('td.column-range', 0)->plaintext;
+            $data[] = [
+                'title' => $link->plaintext,
+                'href' => $link->href,
+                'grade' => $grade,
+                'range' => $range,
+                'percentage' => $percentage,
+            ];
+        }
+        return $data;
+    }
+
+    /**
      * Получить одноразовый токен для входа по логину+паролю
      *
      * @return string Параметр logintoken формы авторизации
