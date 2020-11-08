@@ -103,14 +103,6 @@ class Moodle
         return $matches ? $matches[1] : false;
     }
 
-    private function get() {
-
-    }
-
-    private function post() {
-
-    }
-
     /**
      * Отправка curl запроса
      *

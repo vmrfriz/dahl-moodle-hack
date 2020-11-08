@@ -1,0 +1,5 @@
+RewriteEngine On
+# RewriteRule .*\.(css,js,jpg,png,svg)
+RewriteRule .*\/$ index.php [L,QSA]
+RewriteRule .*\.php$ index.php [L,QSA]
+RewriteRule .*\/[\d\w]+ index.php [L,QSA]
