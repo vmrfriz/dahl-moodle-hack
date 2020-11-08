@@ -118,7 +118,9 @@ class Moodle
             $percentage = floatval(preg_replace(['/[^\d,]/', '/,/'], ['', '.'], $row->find('td.column-percentage', 0)->plaintext));
             $grade = floatval(preg_replace(['/[^\d,]/', '/,/'], ['', '.'], $row->find('td.column-grade', 0)->plaintext));
             $range = $row->find('td.column-range', 0)->plaintext;
+            preg_match('/\Wid=(\d+)/', $link->href, $id_match);
             $data[] = [
+                'id' => intval($id_match[1]),
                 'title' => $link->plaintext,
                 'href' => $link->href,
                 'grade' => $grade,
