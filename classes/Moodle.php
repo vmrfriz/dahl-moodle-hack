@@ -2,36 +2,59 @@
 
 namespace App;
 
-$moodle = new Moodle(['login' => '123', 'password' => '456']);
-
 class Moodle
 {
     private $useragent = 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.183 Mobile Safari/537.36';
     private $cookies = [];
-    private $token = '';
 
-    public function __construct(array $params) {
-        if ($params['login'] && $params['password']) {
+    public function __construct($token = '') {
+        if (!empty($token)) $this->token($token);
+    }
 
-        } else if ($params['token']) {
+    public function __toString(): string {
+        return $this->token();
+    }
 
-        } else {
-            throw new \Error('new Moodle(<array>) must have `login` and `password` or `token`');
+    public function __invoke($token = '') {
+        return $this->token($token);
+    }
+
+    /**
+     * set/get Токен авторизации
+     *
+     * @param string $token Токен авторизации
+     * @return mixed Если передан токен, возвращает экземпляр класса; Если ничего не передано, возвращает используемый токен
+     */
+    public function token(string $token = '') {
+        // set
+        if (!empty($token)) {
+            $this->cookies['MoodleSession'] = $token;
+            return $this;
         }
+        // get
+        return $this->cookies['MoodleSession'];
     }
 
-    private function get_login_token() {
-        $body = $this->http('GET', 'http://moodle.dahluniver.ru/login/index.php')->headers;
-        preg_match('/name=\"logintoken\" value=\"([\d\w]+)\"/', $body, $matches);
-        return $matches[1];
+    /**
+     * Проверка валидности токена авторизации
+     *
+     * @return boolean Валидность - true/false
+     */
+    public function checkToken(): bool {
+        $body = $this->http('GET', 'http://moodle.dahluniver.ru/login/index.php')->body;
+        $logged_in = strpos($body, 'logout.php') !== false;
+        return $logged_in;
     }
 
-    public function get_token() {
-        return $this->token;
-    }
-
-    public function login($login, $password): bool {
-        $this->token = $this->http('POST', 'http://moodle.dahluniver.ru/login/index.php', [
+    /**
+     * Получение токена авторизации от сайта. Хранится в $moodle->token()
+     *
+     * @param string $login     Логин для входа в moodle.dahluniver.ru
+     * @param string $password  Пароль для входа в moodle.dahluniver.ru
+     * @return self
+     */
+    public function login(string $login, string $password): self {
+        $data = $this->http('POST', 'http://moodle.dahluniver.ru/login/index.php', [
             CURLOPT_REFERER => 'http://moodle.dahluniver.ru/login/index.php',
             CURLOPT_HTTPHEADER => [
                 'Content-Type: application/x-www-form-urlencoded',
@@ -42,15 +65,42 @@ class Moodle
                 'username' => $login,
                 'password' => $password,
             ]),
-        ])->cookies['MoodleSession'];
-        return $this->token;
+        ]);
+        return $this;
     }
 
-    public function checkToken($token): bool {
-        // $this->http('POST', '', [
-        //     CURLOPT_REFERER => ''
-        // ]);
-        return true;
+    /**
+     * "Выход" из сайта (пометить токен устаревшим)
+     *
+     * @return self
+     */
+    public function logout(): self {
+        $this->http('GET', 'http://moodle.dahluniver.ru/login/logout.php?sesskey=' . $this->get_logout_token(), [
+            CURLOPT_REFERER => 'http://moodle.dahluniver.ru/my/',
+        ]);
+        return $this;
+    }
+
+    /**
+     * Получить одноразовый токен для входа по логину+паролю
+     *
+     * @return string Параметр logintoken формы авторизации
+     */
+    private function get_login_token(): string {
+        $body = $this->http('GET', 'http://moodle.dahluniver.ru/login/index.php')->body;
+        preg_match('/name=\"logintoken\" value=\"([\d\w]+)\"/', $body, $matches);
+        return $matches[1];
+    }
+
+    /**
+     * Получение токена выхода (для logout.php)
+     *
+     * @return Параметр sesskey для запроса на выход
+     */
+    private function get_logout_token(): string {
+        $body = $this->http('GET', 'http://moodle.dahluniver.ru/my/')->body;
+        preg_match('/\:\/\/moodle.dahluniver.ru\/login\/logout\.php\?sesskey=([\d\w]+)/', $body, $matches);
+        return $matches ? $matches[1] : false;
     }
 
     private function get() {
@@ -61,7 +111,15 @@ class Moodle
 
     }
 
-    private function http($method, $url, $options = []) {
+    /**
+     * Отправка curl запроса
+     *
+     * @param string $method    HTTP-метод
+     * @param string $url       URL-адрес для curl запроса
+     * @param array  $options   Дополнительные параметры для функции curl_setopt
+     * @return object           Объект с параметрами response_code, headers и body
+     */
+    private function http(string $method, string $url, array $options = []): object {
         $ch = curl_init();
         $params = array(
             CURLOPT_URL => $url,
@@ -70,28 +128,49 @@ class Moodle
             CURLOPT_USERAGENT => $this->useragent,
             CURLOPT_HEADER => true,
             CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_COOKIE => $this->cookies ? http_build_query($this->cookies, '', '; ') : '',
         ) + $options;
         curl_setopt_array($ch, $params);
         $response = curl_exec($ch);
+        if ($response == false) {
+            throw new \Error("Moodle->http('{$method}', '{$url}', <array>) --> curl_exec returns false");
+        }
 
         $header_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
         $headers = substr($response, 0, $header_size);
-        preg_match_all('/^Set-Cookie:\s*([^;]*)/mi', $headers, $matches);
-        $cookies = array();
-        foreach($matches[1] as $item) {
-            parse_str($item, $cookie);
-            $cookies = array_merge($cookies, $cookie);
-        }
-        $this->cookies = array_merge($this->cookies, $cookies);
+        $this->updateCookies($headers);
 
         $result = (object) [
             'response_code' => curl_getinfo($ch, CURLINFO_RESPONSE_CODE),
             'headers' => $headers,
             'body' => substr($response, $header_size),
-            'cookies' => $cookies
         ];
 
         curl_close($ch);
         return $result;
+    }
+
+    /**
+     * Обновление $this->cookies из заголовков ответа
+     *
+     * @param string $headers Заголовки ответа curl
+     * @return void
+     */
+    private function updateCookies($headers): void {
+        preg_match_all('/^Set-Cookie:\s*([^;]*)(.{2,}?)(expires=[^;$]+)?/mi', $headers, $matches);
+        $cookies = array();
+        foreach($matches[1] as $index => $cookie_string) {
+            if (!empty($matches[3][$index])) {
+                $datetime = strtotime(substr($matches[3][$index], 8));
+                if ($datetime < time()) {
+                    $cookie_key = explode('=', $matches[1][$index])[0];
+                    unset($this->cookies[$cookie_key]);
+                    continue;
+                }
+            }
+            parse_str($cookie_string, $cookie);
+            $cookies = array_merge($cookies, $cookie);
+        }
+        $this->cookies = array_merge($this->cookies, $cookies);
     }
 }
