@@ -135,12 +135,13 @@ class Moodle
      * Получение ссылки на результаты теста
      *
      * @param integer $test_id      ID теста
-     * @return string               Ссылка на результаты теста
+     * @return mixed                Ссылка на результаты теста или false, если тест не выполнен
      */
     public function get_test_link(int $test_id): string {
         $body = $this->http('GET', 'http://moodle.dahluniver.ru/mod/quiz/view.php?id=' . $test_id)->body;
-        $link = str_get_html($body)->find('table a', 0)->href;
-        return $link;
+        $link = str_get_html($body)->find('table a', 0);
+        $href = $link ? $link->href : false;
+        return $href;
     }
 
     /**
