@@ -32,7 +32,7 @@ class Moodle
             return $this;
         }
         // get
-        return $this->cookies['MoodleSession'];
+        return $this->cookies['MoodleSession'] ?? '';
     }
 
     /**
@@ -41,6 +41,7 @@ class Moodle
      * @return boolean Валидность - true/false
      */
     public function checkToken(): bool {
+        if (!$this->token()) return false;
         $body = $this->http('GET', 'http://moodle.dahluniver.ru/login/index.php')->body;
         $logged_in = strpos($body, 'logout.php') !== false;
         return $logged_in;
