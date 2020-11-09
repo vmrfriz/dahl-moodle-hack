@@ -54,7 +54,7 @@ class Moodle
      * @return self
      */
     public function login(string $login, string $password): self {
-        $data = $this->http('POST', 'http://moodle.dahluniver.ru/login/index.php', [
+        $this->http('POST', 'http://moodle.dahluniver.ru/login/index.php', [
             CURLOPT_REFERER => 'http://moodle.dahluniver.ru/login/index.php',
             CURLOPT_HTTPHEADER => [
                 'Content-Type: application/x-www-form-urlencoded',
@@ -141,6 +141,61 @@ class Moodle
         $body = $this->http('GET', 'http://moodle.dahluniver.ru/mod/quiz/view.php?id=' . $test_id)->body;
         $link = str_get_html($body)->find('table a', 0)->href;
         return $link;
+    }
+
+    /**
+     * Возвращает массив со свойствами вопросов и выбранными ответами
+     *
+     * @param integer $attempt  ID теста
+     * @param integer $cmid     Ещё какой-то ID
+     * @return array            Массив со свойствами вопросов и выбранными ответами
+     */
+    public function get_test_data(int $attempt, int $cmid = null): array {
+        $url = 'http://moodle.dahluniver.ru/mod/quiz/review.php?attempt=' . $attempt . ($cmid ? "&cmid={$cmid}" : '');
+        $body = $this->http('GET', $url)->body;
+
+        // $questions_block = str_get_html($body)->find('form.questionflagsaveform', 0);
+        // echo $questions_block;
+
+        $result = [];
+
+        $questions = str_get_html($body)->find('form.questionflagsaveform div.que');
+        foreach ($questions as $question) {
+            $question_classes = $question->class;
+            $is_answered = strpos($question_classes, 'notanswered') === false;
+            $is_multiple = strpos($question_classes, 'multichoice') !== false;
+
+            $sGrade = $question->find('div.info div.grade', 0)->plaintext;
+            $sGrade = str_replace(',', '.', $sGrade);
+            $aGrade = array_values(
+                array_filter(
+                    explode(' ', $sGrade),
+                    function ($val) {
+                        return is_numeric($val);
+                    }
+                )
+            );
+
+            $question_text = trim($question->find('div.content div.qtext', 0)->plaintext);
+            $answers = $question->find('div.ablock div.answer div');
+            $selected_answers = [];
+            foreach ($answers as $answer) {
+                if ($answer->find('input', 0)->checked) {
+                    $selected_answers[] = trim($answer->plaintext);
+                }
+            }
+
+            $result[] = [
+                'is_answered' => $is_answered,
+                'is_multiple' => $is_multiple,
+                'grade' => ($is_answered ? intval($aGrade[0]) : 0),
+                'grade_max' => intval(end($aGrade)),
+                'question' => $question_text,
+                'selected_answers' => $selected_answers,
+            ];
+        }
+
+        return $result;
     }
 
     /**
