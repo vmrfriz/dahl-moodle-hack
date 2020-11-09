@@ -194,8 +194,8 @@ class Moodle
                 'is_answered' => $is_answered,
                 'is_multiple' => $is_multiple,
                 'is_match' => $is_match,
-                'grade' => ($is_answered ? intval($aGrade[0]) : 0),
-                'grade_max' => intval(end($aGrade)),
+                'grade' => ($is_answered ? floatval($aGrade[0]) : 0),
+                'grade_max' => floatval(end($aGrade)),
                 'question' => $question_text,
                 'selected_answers' => $selected_answers,
             ];
