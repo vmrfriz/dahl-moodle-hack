@@ -4,20 +4,22 @@ namespace App;
 
 class User
 {
+    private $table = 'users';
+
     public static function all() {
-        return self::query('SELECT * FROM `users`');
+        return self::query('SELECT * FROM `'. self::$table .'`');
     }
 
     public static function id($id) {
-        return self::query('SELECT * FROM `users` WHERE `id` = ?', [$id]);
+        return self::query('SELECT * FROM `'. self::$table .'` WHERE `id` = ?', [$id]);
     }
 
     public static function login($login) {
-        return self::query('SELECT * FROM `users` WHERE `login` LIKE ?', [$login]);
+        return self::query('SELECT * FROM `'. self::$table .'` WHERE `login` LIKE ?', [$login]);
     }
 
     public static function token($token) {
-        return self::query('SELECT * FROM `users` WHERE `token` LIKE ?', [$token]);
+        return self::query('SELECT * FROM `'. self::$table .'` WHERE `token` LIKE ?', [$token]);
     }
 
     private static function query(string $statement, array $input_parameters = []): array {
