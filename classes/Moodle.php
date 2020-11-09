@@ -107,7 +107,7 @@ class Moodle
      * @param integer $course_id
      * @return array
      */
-    public function get_course_tests(int $course_id): array {
+    public function get_course_themes(int $course_id): array {
         $body = $this->http('GET', 'http://moodle.dahluniver.ru/grade/report/user/index.php?id=' . $course_id)->body;
         $rows = str_get_html($body)->find('table tbody tr');
         $data = array();
@@ -137,7 +137,7 @@ class Moodle
      * @param integer $test_id      ID теста
      * @return mixed                Ссылка на результаты теста или false, если тест не выполнен
      */
-    public function get_test_link(int $test_id): string {
+    public function get_theme_test_link(int $test_id): string {
         $body = $this->http('GET', 'http://moodle.dahluniver.ru/mod/quiz/view.php?id=' . $test_id)->body;
         $link = str_get_html($body)->find('table a', 0);
         $href = $link ? $link->href : false;
