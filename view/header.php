@@ -1,3 +1,4 @@
+<?php global $USER; ?>
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -9,5 +10,15 @@
 </head>
 <body>
     <div class="container">
-        <div class="row">
-            <h1 class="w-100 text-center my-3">Moodle hack</h1>
+        <div class="text-center">
+        <?php if ($USER): ?>
+            <h1 class="mt-4">
+                <a href="/" title="На главную" style="text-decoration:none!important">
+                    Moodle hack
+                </a>
+            </h1>
+            <a href="/login/<?=$USER->id ?>" class="mb-4 badge badge-secondary"><?=$USER->name ?></a>
+        <?php else: ?>
+            <h1 class="mx-auto my-4">Moodle hack</h1>
+        <?php endif; ?>
+        </div>
