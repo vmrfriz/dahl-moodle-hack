@@ -4,7 +4,7 @@ namespace App;
 
 class User
 {
-    private $table = 'users';
+    private static $table = 'users';
 
     public static function all() {
         return self::query('SELECT * FROM `'. self::$table .'`');
@@ -18,11 +18,23 @@ class User
         return self::query('SELECT * FROM `'. self::$table .'` WHERE `login` LIKE ?', [$login]);
     }
 
-    public static function token($token) {
-        return self::query('SELECT * FROM `'. self::$table .'` WHERE `token` LIKE ?', [$token]);
+    public static function token($id, $token) {
+        global $dbh;
+        $stmt = $dbh->prepare('UPDATE `'. self::$table .'` SET `token` = ? WHERE `id` = ?');
+        $stmt->bindValue(1, $token);
+        $stmt->bindValue(2, $id, \PDO::PARAM_INT);
+        $stmt->execute();
     }
 
-    private static function query(string $statement, array $input_parameters = []): array {
+    public static function active($id, $active) {
+        global $dbh;
+        $stmt = $dbh->prepare('UPDATE `'. self::$table .'` SET `active` = ? WHERE `id` = ?');
+        $stmt->bindValue(1, $active, \PDO::PARAM_INT);
+        $stmt->bindValue(2, $id, \PDO::PARAM_INT);
+        $stmt->execute();
+    }
+
+    private static function query(string $statement, array $input_parameters = []): object {
         global $dbh;
 
         if ($input_parameters) {
@@ -40,6 +52,6 @@ class User
         $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         if (count($result) === 1) $result = $result[0];
 
-        return $result ?: [];
+        return (object) ($result ?: []);
     }
 }
