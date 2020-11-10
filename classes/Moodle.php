@@ -168,8 +168,8 @@ class Moodle
      * @param integer $cmid     Ещё какой-то ID
      * @return array            Массив со свойствами вопросов и выбранными ответами
      */
-    public function get_test_data(int $attempt, int $cmid = null): array {
-        $url = 'http://moodle.dahluniver.ru/mod/quiz/review.php?attempt=' . $attempt . ($cmid ? "&cmid={$cmid}" : '');
+    public function get_test_data(int $attempt, int $cmid = 0): array {
+        $url = 'http://moodle.dahluniver.ru/mod/quiz/review.php?attempt=' . $attempt . ($cmid !== 0 ? "&cmid={$cmid}" : '');
         $body = $this->http('GET', $url)->body;
 
         $result = [];
