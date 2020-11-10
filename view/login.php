@@ -6,6 +6,7 @@
             <th>Владелец</th>
             <th>Логин</th>
             <th>Токен</th>
+            <th>Пароль</th>
         </tr>
     </thead>
     <tbody>
@@ -24,9 +25,11 @@
             </td>
             <td><?=$USER->login ?></td>
             <td><?=$USER->token ?></td>
+            <td><?=($USER->active ? 'Да' : '<div class="badge badge-danger">Нет</div>') ?></td>
         </tr>
     </tbody>
 </table>
+
 <div class="my-4">
-    <a href="/" class="btn btn-primary">&laquo; На главную</a>
+    <a href="/" class="btn btn-primary">&laquo; Пользователи</a>
 </div>

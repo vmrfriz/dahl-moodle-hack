@@ -13,19 +13,10 @@
     <?php foreach ($USERS as $user): ?>
         <tr<?php if (!$user['active']): ?> class="bg-secondary"<?php endif ?>>
             <?php $active = (new App\Moodle($user['token']))->checkToken(); ?>
+            <?php if (!$active) App\User::token($user['id'], ''); ?>
             <td><?=$user['name'] ?></td>
             <td><?=$user['login'] ?></td>
-            <td>
-                <div style="
-                    background-color: <?php if ($active): ?>green<?php else: ?>red<?php endif ?>;
-                    border-radius: 100px;
-                    width: .8em;
-                    height: .8em;
-                    display: inline-block;
-                    margin-right: 10px;
-                "></div>
-                <?=$user['token'] ?>
-            </td>
+            <td><?=($active ? $user['token'] : '') ?></td>
             <td><?php if ($user['active']): ?>Да<?php else: ?>Нет<?php endif ?></td>
             <td><a href="/user/<?=$user['id'] ?>/courses/">Курсы</a></td>
         </tr>

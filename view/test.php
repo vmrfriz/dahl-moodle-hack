@@ -1,33 +1,38 @@
-<?php global $USER, $MOODLE, $TEST; ?>
+<? global $USER, $MOODLE, $TEST, $URI ?>
 
-<h2>Результаты теста: </h2>
+<? if (strpos($_SERVER['REQUEST_URI'], '/user/') === 0): ?>
+<h2><span class="h4">Результаты теста:</span><br><?=$USER->name ?></h2>
+<div class="mb-4">
+    <a href="/test/<?=$URI[3] ?>">Выборка <span class="badge badge-success">правильных</span> ответов со всех аккаунтов</a>
+</div>
+<? else: ?>
+<h2 class="mb-3">Наилучшие ответы со <span class="badge badge-success">всех аккаунтов</span></h2>
+<? endif; ?>
 
 <table class="table bg-light">
     <thead>
         <tr>
-            <th>№</th>
             <th>Вопрос</th>
             <th>Ответы</th>
             <th>Оценка</th>
         </tr>
     </thead>
     <tbody>
-    <?php foreach ($TEST as $i => $t): ?>
-    <?php if ($t['is_answered']): ?>
-        <tr<?php if ($t['grade'] === $t['grade_max']): ?> class="bg-success"<?php endif ?>>
-            <td><?=($i + 1) ?></td>
+    <? foreach ($TEST as $i => $t): ?>
+    <? if ($t['is_answered']): ?>
+        <tr<? if ($t['grade'] === $t['grade_max']): ?> class="bg-success"<? endif ?>>
             <td><?=$t['question'] ?></td>
             <td>
                 <ul>
-                <?php foreach ($t['selected_answers'] as $answer): ?>
+                <? foreach ($t['selected_answers'] as $answer): ?>
                     <li><?=$answer ?></li>
-                <?php endforeach ?>
+                <? endforeach ?>
                 </ul>
             </td>
             <td class="text-right text-nowrap"><?=$t['grade'] ?> из <?=$t['grade_max'] ?></td>
         </tr>
-    <?php endif ?>
-    <?php endforeach ?>
+    <? endif ?>
+    <? endforeach ?>
     </tbody>
 </table>
 
