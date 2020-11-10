@@ -2,95 +2,114 @@
 
 namespace App;
 
-
 class Cache
 {
-    private $db;
+    private static $folder = 'cache/';
     private $time;
-    private $hash;
-    private $path = 'cache/';
-    private $exists = null;
-    private $actual = null;
-    private static $disable = false;
+    private $path;
+    private $disable = false;
 
-    public function __construct($time = 3600) {
-        global $dbh;
-        $this->db = $dbh;
+    private function __construct(int $time, string $path) {
         $this->time = $time;
-        $this->hash = md5($_SERVER['REQUEST_URI']);
-
-        if ($this::$disable === false)
-        if ($this->exists() && $this->actual()) {
-            $html = "<a href=\"/clearcache/?page={$_SERVER['REQUEST_URI']}\" title=\"Сбросить кэш\" class=\"badge badge-success\" style=\"position:absolute;top:10px;right:10px;\">cached</a>";
-            $html .= file_get_contents($this->path . $this->hash);
-            die($html);
-
+        $this->path = $path;
+        if ($this::isActualCache($this->path)) {
+            $hash = $this::hash($this->path);
+            $html = file_get_contents($this::$folder . $hash);
+            $cache_btn = '<a href="/clearcache/?page='. $_SERVER['REQUEST_URI'] .'" class="badge badge-success" title="Сбросить кэш" style="position:absolute;top:10px;right:10px;">cached</a>';
+            $html = str_replace('<!-- [cached] -->', $cache_btn, $html);
+            echo '<!-- from cache -->' . $html;
+            exit;
         } else {
-            if ($this->exists())
-                unlink($this->path . $this->hash);
-            $this->storage($this->hash, null);
-            ob_start();
+            $this::clear($this->path);
+            ob_start(array($this, 'sanitize_output'));
         }
-    }
-
-    public static function clear($request_uri) {
-        global $dbh;
-        $hash = md5($request_uri);
-        @unlink('cache/' . $hash);
-        $stmt = $dbh->prepare('DELETE FROM `cache` WHERE `name` = ?');
-        $stmt->execute([$hash]);
-        return true;
-    }
-
-    public function disable() {
-        $this::$disable = true;
-    }
-
-    public static function disableCache() {
-        self::$disable = true;
     }
 
     public function save() {
+        global $dbh;
         $html = ob_get_clean();
-        if ($this::$disable === false) {
-            file_put_contents($this->path . $this->hash, $html);
-            $this->storage($this->hash, date('Y-m-d H:i:s'));
+        $html = $this->sanitize_output($html);
+        if ($this->disable === false) {
+            $hash = $this::hash($this->path);
+            file_put_contents($this::$folder . $hash, $html);
+            $stmt = $dbh->prepare('INSERT INTO `cache` (`name`, `expires_at`) VALUES (:name, :expires) ON DUPLICATE KEY UPDATE `expires_at` = :expires');
+            $stmt->execute([
+                ':name' => $this::hash($this->path),
+                ':expires' => date('Y-m-d H:i:s', time() + $this->time),
+            ]);
         }
-        echo $html;
+        echo '<!-- cache created -->' . $html;
     }
 
-    private function storage($name, $new_value = '') {
-        if (is_null($new_value)) {
-            $stmt = $this->db->prepare('DELETE FROM `cache` WHERE `name` = ?');
-            $value = $stmt->execute([$name]);
-            return $value;
-
-        } else if ($new_value == '') {
-            $stmt = $this->db->prepare('SELECT UNIX_TIMESTAMP(`timestamp`) AS `timestamp` FROM `cache` WHERE `name` = ?');
-            $stmt->execute([$name]);
-            $value = $stmt->fetch(\PDO::FETCH_ASSOC)['timestamp'];
-            return $value;
-
-        } else {
-            $stmt = $this->db->prepare('INSERT INTO `cache` (`name`, `timestamp`) VALUES (:name, :timestamp) ON DUPLICATE KEY UPDATE `timestamp` = :timestamp');
-            $value = $stmt->execute([':name' => $name, ':timestamp' => intval($new_value)]);
-            return $value;
-        }
+    public function expires(int $time): void {
+        $this->time = $time;
     }
 
-    private function exists() {
-        if (is_null($this->exists))
-            $this->exists = file_exists($this->path . $this->hash);
-        return $this->exists;
+    public function disable() {
+        $this->disable = true;
     }
 
-    private function actual() {
-        if (is_null($this->actual)) {
-            $hash = $this->hash;
-            $created_at = ($this->storage($hash) ?? 0);
-            $expires_at = ($created_at + $this->time);
-            $this->actual = $created_at !== 0 && $expires_at < time();
-        }
-        return $this->actual;
+    private function sanitize_output($buffer) {
+        $search = array(
+            '/\>[^\S ]+/s',     // strip whitespaces after tags, except space
+            '/[^\S ]+\</s',     // strip whitespaces before tags, except space
+            '/(\s)+/s',         // shorten multiple whitespace sequences
+            '/<!--(.|\s)*?-->/',// Remove HTML comments
+            '/<body>/'
+        );
+        $replace = array(
+            '>',
+            '<',
+            '\\1',
+            '',
+            '<body><!-- [cached] -->'
+        );
+        $buffer = preg_replace($search, $replace, $buffer);
+        return $buffer;
     }
+
+    public static function start(int $time = 3600, string $request_uri = ''): Cache {
+        if ($request_uri === '') $request_uri = $_SERVER['REQUEST_URI'];
+        $instance = new self($time, $request_uri);
+        return $instance;
+    }
+
+    public static function clear(string $path): bool {
+        global $dbh;
+        $hash = self::hash($path);
+        $stmt = $dbh->prepare('DELETE FROM `cache` WHERE `name` = ?');
+        $result = $stmt->execute([$hash]);
+        @unlink(self::$folder . $hash);
+        return $result;
+    }
+
+    public static function isCached(string $path): bool {
+        return self::cache_exists($path);
+    }
+
+    public static function isActualCache(string $path): bool {
+        $exists = self::cache_exists($path);
+        $actual = self::cache_actual($path);
+        return $exists && $actual;
+    }
+
+    private static function hash(string $path): string {
+        return md5($path);
+    }
+
+    private static function cache_exists(string $path): bool {
+        $hash = self::hash($path);
+        $isExists = file_exists(self::$folder . $hash);
+        return $isExists;
+    }
+
+    private static function cache_actual(string $path): bool {
+        global $dbh;
+        $hash = self::hash($path);
+        $stmt = $dbh->prepare('SELECT UNIX_TIMESTAMP(`expires_at`) AS `expires_at` FROM `cache` WHERE `name` = ?');
+        $stmt->execute([$hash]);
+        $expires_at = $stmt->fetch(\PDO::FETCH_ASSOC)['expires_at'];
+        return intval($expires_at) > time();
+    }
+
 }
