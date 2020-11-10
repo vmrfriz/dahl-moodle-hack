@@ -5,12 +5,13 @@
             <th>Владелец</th>
             <th>Логин</th>
             <th>Токен</th>
+            <th>Пароль</th>
             <th></th>
         </tr>
     </thead>
     <tbody>
     <?php foreach ($USERS as $user): ?>
-        <tr>
+        <tr<?php if (!$user['active']): ?> class="bg-secondary"<?php endif ?>>
             <?php $active = (new App\Moodle($user['token']))->checkToken(); ?>
             <td><?=$user['name'] ?></td>
             <td><?=$user['login'] ?></td>
@@ -25,6 +26,7 @@
                 "></div>
                 <?=$user['token'] ?>
             </td>
+            <td><?php if ($user['active']): ?>Да<?php else: ?>Нет<?php endif ?></td>
             <td><a href="/user/<?=$user['id'] ?>/courses/">Курсы</a></td>
         </tr>
     <?php endforeach ?>
