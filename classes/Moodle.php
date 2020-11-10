@@ -2,6 +2,8 @@
 
 namespace App;
 
+use Exception;
+
 class Moodle
 {
     private $useragent = 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.183 Mobile Safari/537.36';
@@ -17,6 +19,20 @@ class Moodle
 
     public function __invoke($token = '') {
         return $this->token($token);
+    }
+
+    /**
+     * Проверка доступности сайта
+     *
+     * @return boolean
+     */
+    public static function isDown(): bool {
+        try {
+            (new self())->http('GET', 'http://moodle.dahluniver.ru/');
+            return false;
+        } catch (\Error $e) {
+            return true;
+        }
     }
 
     /**
@@ -244,6 +260,7 @@ class Moodle
             CURLOPT_USERAGENT => $this->useragent,
             CURLOPT_HEADER => true,
             CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 7,
             CURLOPT_COOKIE => $this->cookies ? http_build_query($this->cookies, '', '; ') : '',
         ) + $options;
         curl_setopt_array($ch, $params);
