@@ -11,6 +11,10 @@
 
 $uri = $_SERVER['REQUEST_URI'];
 $URI = array_values(array_filter(explode('/', $uri)));
+if (App\Moodle::isDown()) {
+    view('down');
+    exit;
+}
 
 switch ($URI[0] ?? false) {
     case 'api':
@@ -30,6 +34,19 @@ switch ($URI[0] ?? false) {
         if ($MOODLE->checkToken() === false) header('location: /login/' . $USER->id . '/?redirect=' . $uri);
         user_methods(array_slice($URI, 2));
     break;
+
+    // case 'test':
+    //     global $TEST;
+    //     if (!$URI[1]) header("location: " . ($_SERVER['HTTP_REFERER'] ?: '/'));
+
+    //     $users = App\User::all();
+    //     foreach ($users as $u) {
+    //         $moodle = new App\Moodle($u['token']);
+    //         $curr_test = $moodle->get_test_data($URI[1]);
+    //         if (!$TEST) $TEST = $curr_test;
+    //         else foreach ($TEST)
+    //     }
+    // break;
 
     default:
         if ($uri !== '/')
