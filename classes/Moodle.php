@@ -175,6 +175,8 @@ class Moodle
         $result = [];
         $questions = str_get_html($body)->find('form.questionflagsaveform div.que');
         foreach ($questions as $question) {
+            $question_id = $question->id;
+            $question_order = trim(strrchr($question_id, '-'), '- ');
             $question_classes = $question->class;
             $is_answered = strpos($question_classes, 'notanswered') === false;
             $is_multiple = strpos($question_classes, 'multichoice') !== false;
@@ -207,13 +209,15 @@ class Moodle
                 }
             }
 
-            $result[] = [
+            $result[md5($question_text)] = [
+                'id'          => $question_id,
+                'order'       => $question_order,
                 'is_answered' => $is_answered,
                 'is_multiple' => $is_multiple,
-                'is_match' => $is_match,
-                'grade' => ($is_answered ? floatval($aGrade[0]) : 0),
-                'grade_max' => floatval(end($aGrade)),
-                'question' => $question_text,
+                'is_match'    => $is_match,
+                'grade'       => ($is_answered ? floatval($aGrade[0]) : 0),
+                'grade_max'   => floatval(end($aGrade)),
+                'question'    => $question_text,
                 'selected_answers' => $selected_answers,
             ];
         }
