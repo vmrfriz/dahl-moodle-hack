@@ -1,2 +1,3 @@
-cache/
+/cache/*
+!/cache/.gitkeep
 /vendor/
