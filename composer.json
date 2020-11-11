@@ -1,0 +1,12 @@
+{
+    "name": "mrfriz/dahl-moodle-hack",
+    "authors": [
+        {
+            "name": "Valeriy Grechukha",
+            "email": "v.mrfriz@gmail.com"
+        }
+    ],
+    "require": {
+        "nesbot/carbon": "^2.41"
+    }
+}
