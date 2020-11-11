@@ -1,8 +1,12 @@
 <?php
 
-function view($name) {
+function view(...$names) {
     include('view/header.php');
-    include("view/{$name}.php");
+    foreach ($names as $name)
+        if (substr($name, 0, 1) == '<')
+            echo $name;
+        else
+            include("view/{$name}.php");
     include('view/footer.php');
 }
 
