@@ -9,9 +9,16 @@ use App\Api;
 $uri = $_SERVER['REQUEST_URI'];
 
 $URI = array_values(array_filter(explode('/', $uri)));
-if (Moodle::isDown() && !Cache::isCached($uri)) {
-    view('down');
+if (Cache::isActualCache($uri)) {
+    echo Cache::get($uri);
     exit;
+}
+
+if (Moodle::isDown()) {
+    if (Cache::isCached($uri))
+        die(Cache::get($uri));
+    else
+        die(view('down'));
 }
 
 switch ($URI[0] ?? false) {
@@ -34,7 +41,7 @@ switch ($URI[0] ?? false) {
     break;
 
     case 'user':
-        $cache = Cache::start(86400);
+        $cache = Cache::start(86400 * 30);
         $USER = User::id($URI[1]);
         $MOODLE = new Moodle($USER->token);
         if ($MOODLE->checkToken() === false) header('location: /login/' . $USER->id . '/?redirect=' . $uri);
@@ -52,7 +59,7 @@ switch ($URI[0] ?? false) {
     break;
 
     case 'completed-tests':
-        $cache = Cache::start();
+        $cache = Cache::start(86400 * 30);
         $users = User::all();
         $users_complete_test = [];
         foreach ($users as $u) {
@@ -77,7 +84,7 @@ switch ($URI[0] ?? false) {
     default:
         if ($uri !== '/')
             header('location: /');
-        $cache = Cache::start(180);
+        $cache = Cache::start(300);
         $USERS = User::all();
         view('index');
         $cache->save();

@@ -2,6 +2,8 @@
 
 namespace App;
 
+use Carbon\Carbon;
+
 class Cache
 {
     private static $folder = 'cache/';
@@ -13,15 +15,9 @@ class Cache
         $this->time = $time;
         $this->path = $path;
         if ($this::isActualCache($this->path)) {
-            $hash = $this::hash($this->path);
-            $html = file_get_contents($this::$folder . $hash);
-            $cache_btn = '<a href="/clearcache/?page='. $_SERVER['REQUEST_URI'] .'" class="badge badge-success" title="Сбросить кэш" style="position:absolute;top:10px;right:10px;">cached</a>';
-            $html = str_replace('<!-- [cached] -->', $cache_btn, $html);
-            echo '<!-- from cache -->' . $html;
-            exit;
+            die( $this::get($this->path) );
         } else {
-            $this::clear($this->path);
-            ob_start(array($this, 'sanitize_output'));
+            ob_start();
         }
     }
 
@@ -83,6 +79,19 @@ class Cache
         return $result;
     }
 
+    public static function get(string $path): string {
+        global $dbh;
+        $hash = self::hash($path);
+        $html = file_get_contents(self::$folder . $hash);
+        $stmt = $dbh->prepare('SELECT DATE_FORMAT(`created_at`, "%d.%m.%Y %H:%i") AS `created_at` FROM `cache` WHERE `name` = ?');
+        $stmt->execute([$hash]);
+        $created_at = $stmt->fetch(\PDO::FETCH_ASSOC)['created_at'];
+        $created_at = Carbon::now()->locale('ru')->diffForHumans(new Carbon($created_at));
+        $cache_btn = '<a href="/clearcache/?page='. $_SERVER['REQUEST_URI'] .'" class="badge badge-success" title="Сбросить кэш" style="position:absolute;top:10px;right:10px;">'. $created_at .'</a>';
+        $html = '<!-- from cache -->' . str_replace('<!-- [cached] -->', $cache_btn, $html);
+        return $html;
+    }
+
     public static function isCached(string $path): bool {
         return self::cache_exists($path);
     }
@@ -108,6 +117,8 @@ class Cache
         $hash = self::hash($path);
         $stmt = $dbh->prepare('SELECT UNIX_TIMESTAMP(`expires_at`) AS `expires_at` FROM `cache` WHERE `name` = ?');
         $stmt->execute([$hash]);
+        $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if ($result === false) return false;
         $expires_at = $stmt->fetch(\PDO::FETCH_ASSOC)['expires_at'];
         return intval($expires_at) > time();
     }
