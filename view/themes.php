@@ -20,7 +20,10 @@
             <td class="text-right"><?=$theme['grade'] ?></td>
             <td class="text-right"><?=$theme['range'] ?></td>
             <td class="text-right"><?=intval($theme['percentage']) ?>%</td>
-            <td class="text-right"><a href="/test/<?=$theme['id'] ?>" class="badge badge-success">Лучшие ответы</a></td>
+            <td class="text-right">
+                <a href="/test/<?=$theme['id'] ?>" class="btn btn-sm btn-outline-success" title="Лучшие ответы">&#10004;</a>
+                <a href="/completed-tests/<?=$theme['id'] ?>" class="btn btn-sm btn-outline-secondary ml-1" title="Найти выполненные">&#128270;</a>
+            </td>
         </tr>
     <?php endforeach ?>
     </tbody>

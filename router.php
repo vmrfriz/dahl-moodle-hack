@@ -6,17 +6,7 @@ use App\Moodle;
 use App\Cache;
 use App\Api;
 
-// class Router
-// {
-//     public function __construct() {
-//         $_SERVER['REQUEST_URI'];
-//     }
-// }
-
 $uri = $_SERVER['REQUEST_URI'];
-// if (isset($_GET['nocache'])) {
-//     Cache::disableCache();
-// }
 
 $URI = array_values(array_filter(explode('/', $uri)));
 if (Moodle::isDown() && !Cache::isCached($uri)) {
@@ -58,6 +48,23 @@ switch ($URI[0] ?? false) {
         if (!$URI[1]) header("location: " . ($_SERVER['HTTP_REFERER'] ?: '/'));
         $TEST = get_correct_answers();
         view('test');
+        $cache->save();
+    break;
+
+    case 'completed-tests':
+        $cache = Cache::start();
+        $users = User::all();
+        $users_complete_test = [];
+        foreach ($users as $u) {
+            $data = helper_get_moodle_user($u);
+            if (!$data) continue;
+            list('user' => $u, 'moodle' => $moodle) = $data;
+
+            $test_link = $moodle->get_theme_test_link($URI[1]);
+            $user_id = $u['id'];
+            if ($test_link) $users_complete_test[$user_id] = $u['name'];
+        }
+        view('completed-tests');
         $cache->save();
     break;
 
@@ -120,17 +127,9 @@ function get_correct_answers() {
     foreach ($users as $u) {
 
         // Получение рабочего экземпляра Moodle для текущего пользователя
-        if (!$u['active']) continue;
-        $moodle = new Moodle($u['token']);
-        if (!$moodle->checkToken()) {
-            $moodle->login($u['login'], $u['password']);
-            if ($moodle->checkToken()) {
-                User::token($u['id'], $moodle->token());
-            } else {
-                User::active($u['id'], false);
-                continue;
-            }
-        }
+        $data = helper_get_moodle_user($u);
+        if (!$data) continue;
+        list('user' => $u, 'moodle' => $moodle) = $data;
 
         // Получение ответов на тест текущего пользователя ($curr_test)
         $test_link = $moodle->get_theme_test_link($URI[1]);
