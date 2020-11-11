@@ -17,8 +17,8 @@
             <td><?=$user['name'] ?></td>
             <td><?=$user['login'] ?></td>
             <td><?=($active ? $user['token'] : '') ?></td>
-            <td><?php if ($user['active']): ?>Да<?php else: ?>Нет<?php endif ?></td>
-            <td><a href="/user/<?=$user['id'] ?>/courses/">Курсы</a></td>
+            <td><?=($user['active'] ? 'Да' : 'Нет') ?></td>
+            <td><? if ($user['active']): ?><a href="/user/<?=$user['id'] ?>/courses/">Курсы</a><? endif ?></td>
         </tr>
     <?php endforeach ?>
     </tbody>
