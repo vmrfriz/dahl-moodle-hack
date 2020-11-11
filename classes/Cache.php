@@ -86,8 +86,8 @@ class Cache
         $stmt = $dbh->prepare('SELECT DATE_FORMAT(`created_at`, "%d.%m.%Y %H:%i") AS `created_at` FROM `cache` WHERE `name` = ?');
         $stmt->execute([$hash]);
         $created_at = $stmt->fetch(\PDO::FETCH_ASSOC)['created_at'];
-        $created_at = Carbon::now()->locale('ru')->diffForHumans(new Carbon($created_at));
-        $cache_btn = '<a href="/clearcache/?page='. $_SERVER['REQUEST_URI'] .'" class="badge badge-success" title="Сбросить кэш" style="position:absolute;top:10px;right:10px;">'. $created_at .'</a>';
+        $created_at = Carbon::now()->locale('ru')->longAbsoluteDiffForHumans(new Carbon($created_at));
+        $cache_btn = '<a href="/clearcache/?page='. $_SERVER['REQUEST_URI'] .'" class="badge badge-success" title="Сбросить кэш" style="position:absolute;top:10px;right:10px;">Кэшировано '. $created_at .' назад</a>';
         $html = '<!-- from cache -->' . str_replace('<!-- [cached] -->', $cache_btn, $html);
         return $html;
     }
@@ -119,7 +119,7 @@ class Cache
         $stmt->execute([$hash]);
         $result = $stmt->fetch(\PDO::FETCH_ASSOC);
         if ($result === false) return false;
-        $expires_at = $stmt->fetch(\PDO::FETCH_ASSOC)['expires_at'];
+        $expires_at = $result['expires_at'];
         return intval($expires_at) > time();
     }
 
