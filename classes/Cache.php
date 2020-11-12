@@ -28,10 +28,19 @@ class Cache
         if ($this->disable === false) {
             $hash = $this::hash($this->path);
             file_put_contents($this::$folder . $hash, $html);
-            $stmt = $dbh->prepare('INSERT INTO `cache` (`name`, `expires_at`) VALUES (:name, :expires) ON DUPLICATE KEY UPDATE `expires_at` = :expires');
+            $stmt = $dbh->prepare('INSERT
+                INTO
+                    `cache` (`name`, `expires_at`, `created_at`)
+                VALUES
+                    (:name, FROM_UNIXTIME(:expires), FROM_UNIXTIME(:time))
+                ON DUPLICATE KEY UPDATE
+                    `expires_at` = FROM_UNIXTIME(:expires),
+                    `created_at` = :time
+                ');
             $stmt->execute([
                 ':name' => $this::hash($this->path),
-                ':expires' => date('Y-m-d H:i:s', time() + $this->time),
+                ':expires' => time() + $this->time,
+                ':time' => time(),
             ]);
         }
         echo '<!-- cache created -->' . $html;
@@ -83,9 +92,9 @@ class Cache
         global $dbh;
         $hash = self::hash($path);
         $html = file_get_contents(self::$folder . $hash);
-        $stmt = $dbh->prepare('SELECT DATE_FORMAT(`created_at`, "%d.%m.%Y %H:%i") AS `created_at` FROM `cache` WHERE `name` = ?');
+        $stmt = $dbh->prepare('SELECT UNIX_TIMESTAMP(`created_at`) AS `created_at` FROM `cache` WHERE `name` = ?');
         $stmt->execute([$hash]);
-        $created_at = $stmt->fetch(\PDO::FETCH_ASSOC)['created_at'];
+        $created_at = (int) $stmt->fetch(\PDO::FETCH_ASSOC)['created_at'];
         $created_at = Carbon::now()->locale('ru')->longAbsoluteDiffForHumans(new Carbon($created_at));
         $cache_btn = '<a href="/clearcache/?page='. $_SERVER['REQUEST_URI'] .'" class="badge badge-success" title="Сбросить кэш" style="position:absolute;top:10px;right:10px;">Кэшировано '. $created_at .' назад</a>';
         $html = '<!-- from cache -->' . str_replace('<!-- [cached] -->', $cache_btn, $html);
