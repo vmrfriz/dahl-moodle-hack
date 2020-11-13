@@ -59,15 +59,15 @@ class Cache
             '/\>[^\S ]+/s',     // strip whitespaces after tags, except space
             '/[^\S ]+\</s',     // strip whitespaces before tags, except space
             '/(\s)+/s',         // shorten multiple whitespace sequences
-            '/<!--(.|\s)*?-->/',// Remove HTML comments
-            '/<body>/'
+            '/<!--(^ \[cached\] )(.|\s)*?-->/',// Remove HTML comments
+            // '/<body>/'
         );
         $replace = array(
             '>',
             '<',
             '\\1',
             '',
-            '<body><!-- [cached] -->'
+            // '<body><!-- [cached] -->'
         );
         $buffer = preg_replace($search, $replace, $buffer);
         return $buffer;
@@ -96,7 +96,7 @@ class Cache
         $stmt->execute([$hash]);
         $created_at = (int) $stmt->fetch(\PDO::FETCH_ASSOC)['created_at'];
         $created_at = Carbon::now()->locale('ru')->longAbsoluteDiffForHumans(new Carbon($created_at));
-        $cache_btn = '<a href="/clearcache/?page='. $_SERVER['REQUEST_URI'] .'" class="badge badge-success" title="Сбросить кэш" style="position:absolute;top:10px;right:10px;">Кэшировано '. $created_at .' назад</a>';
+        $cache_btn = '<a href="/clearcache/?page='. $_SERVER['REQUEST_URI'] .'" class="btn btn-sm btn-outline-secondary" title="Страница выглядела так '. $created_at .' назад. Нажмите, чтобы обновить">&#8635; '. $created_at .' назад</a>';
         $html = '<!-- from cache -->' . str_replace('<!-- [cached] -->', $cache_btn, $html);
         return $html;
     }
