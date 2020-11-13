@@ -7,6 +7,7 @@ use App\Cache;
 use App\Api;
 
 $uri = $_SERVER['REQUEST_URI'];
+// Cache::clear($uri);
 
 $URI = array_values(array_filter(explode('/', $uri)));
 if (Cache::isActualCache($uri)) {
@@ -74,6 +75,28 @@ switch ($URI[0] ?? false) {
         $cache->save();
     break;
 
+	case 'task':
+		$cache = Cache::start(86400 * 30);
+		$title = null;
+		$users = User::all();
+        $completed_tasks = [];
+        foreach ($users as $u) {
+            $data = helper_get_moodle_user($u);
+            if (!$data) continue;
+            list('user' => $u, 'moodle' => $moodle) = $data;
+
+            $task = $moodle->get_task_data($URI[1]);
+			if (!isset($task['files'])) continue;
+			if (!$title) $title = $task['title'];
+            $completed_tasks[] = [
+				'user' => $u,
+				'task' => $task
+			];
+        }
+		view('completed-tasks');
+		$cache->save();
+	break;
+
     case 'clearcache':
         if (!$_GET['page']) header('Location: ' . $_SERVER['HTTP_REFERER']);
         Cache::clear($_GET['page']);
@@ -115,6 +138,17 @@ function user_methods($URI) {
             global $TEST;
             $TEST = $MOODLE->get_test_data($URI[1]);
             view('test');
+        break;
+
+        case 'task':
+            global $TASK;
+            $TASK = $MOODLE->get_task_data($URI[1]);
+            view('task');
+        break;
+
+        case 'download':
+            $cache->disable();
+            $MOODLE->get_page($_GET['url']);
         break;
 
         default:

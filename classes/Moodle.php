@@ -240,6 +240,54 @@ class Moodle
     }
 
     /**
+     * Возвращает массив с названием задания и файлами (названия, ссылки)
+     *
+     * @param  integer  $id  ID задания
+     * @return array
+     */
+	public function get_task_data(int $id): array {
+		$body = $this->http('GET', 'http://moodle.dahluniver.ru/mod/assign/view.php?id=' . $id)->body;
+
+		$result = [];
+		$dom = str_get_html($body);
+
+		$dom_title = $dom->find('h2', 0);
+		$result['title'] = $dom_title ? trim($dom_title->plaintext) : '';
+
+		$dom_files = $dom->find('.fileuploadsubmission a');
+		if ($dom_files)
+		foreach ($dom_files as $file) {
+			if (!isset($result['files'])) $result['files'] = [];
+			$result['files'][] = [
+				'title' => trim($file->plaintext),
+				'href' => $file->href,
+			];
+		}
+
+		$dom_feedback = $dom->find('.feedbacktable tr');
+		if ($dom_feedback)
+		foreach ($dom_feedback as $tr) {
+			if (trim(mb_strtolower($tr->first_child()->plaintext)) != 'оценка') continue;
+			$result['grade'] = str_replace(['&nbsp;', ','], [' ', '.'], trim($tr->last_child()->plaintext));
+			break;
+		}
+
+		return $result;
+    }
+
+    public function get_page(string $link) {
+        $response = $this->http('GET', $link);
+        $headers = explode("\n", $response->headers);
+        foreach ($headers as $header) {
+            if (!trim($header)) continue;
+            if (substr(mb_strtolower(trim($header)), 0, 6) == 'cookie') continue;
+            header($header);
+        }
+        echo $response->body;
+        exit;
+    }
+
+    /**
      * Получение ID теста и название темы
      *
      * @param integer $test_id      ID темы

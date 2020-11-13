@@ -1,6 +1,7 @@
 <?php global $USER, $DATA, $MOODLE;
 
 include('themes-tests.php');
+include('themes-tasks.php');
 
 ?>
 
