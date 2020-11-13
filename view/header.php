@@ -10,15 +10,15 @@
 </head>
 <body>
     <div class="container">
-        <div class="text-center row p-4">
+        <header class="text-center row p-4">
         <?php if ($_SERVER['REQUEST_URI'] === '/'): ?>
-            <h1 class="mx-auto my-4 col-md-4 offset-md-4">Moodle hack</h1>
+            <div class="h1 mx-auto my-4 col-md-4 offset-md-4">Moodle hack</div>
         <?php else: ?>
-            <h1 class="mt-4 col-md-4 offset-md-4">
+            <div class="h1 mt-4 col-md-4 offset-md-4">
                 <a href="/" title="На главную" style="text-decoration:none!important">
                     Moodle hack
                 </a>
-            </h1>
+            </div>
             <? if ($USER): ?>
             <div class="col-md-4 pt-3 text-right">
                 <div class="btn-group mt-3">
@@ -39,4 +39,4 @@
             </div>
             <? endif; ?>
         <?php endif; ?>
-        </div>
+        </header>
