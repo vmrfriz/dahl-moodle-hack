@@ -1,10 +1,14 @@
-<?php global $users_complete_test, $URI; ?>
+<?php global $title, $users_complete_test, $URI; ?>
+
+<h1 class="h3 font-weight-normal mb-4">
+	<?=$title ?>
+</h1>
 
 <? if ($users_complete_test): ?>
-<h1>
+<h2>
     Тест выполнили
     <a href="/test/<?=$URI[1] ?>" class="btn btn-sm btn-outline-success" title="Лучшие ответы">&#10004;</a>
-</h1>
+</h2>
 
 <div class="row">
     <div class="col-md-6">

@@ -67,9 +67,8 @@ switch ($URI[0] ?? false) {
             if (!$data) continue;
             list('user' => $u, 'moodle' => $moodle) = $data;
 
-            $test_link = $moodle->get_theme_test_link($URI[1]);
-            $user_id = $u['id'];
-            if ($test_link) $users_complete_test[$user_id] = $u['name'];
+            $is_complete = $moodle->check_complete_test($URI[1]);
+            if ($is_complete) $users_complete_test[$u['id']] = $u['name'];
         }
         view('completed-tests');
         $cache->save();
@@ -92,7 +91,11 @@ switch ($URI[0] ?? false) {
 }
 
 function user_methods($URI) {
-    global $MOODLE, $USER;
+    global $MOODLE, $USER, $cache;
+
+	if ($URI[0] !== 'courses' && !$URI[1]) {
+		header("location: /user/{$USER->id}/courses/");
+	}
 
     switch ($URI[0]) {
         case 'courses':
@@ -102,19 +105,15 @@ function user_methods($URI) {
         break;
 
         case 'themes':
-            global $THEMES, $cache;
+            global $DATA, $cache;
             $cache->expires(3600);
-            if (!$URI[1]) header("location: /user/{$USER->id}/courses/");
-            $THEMES = $MOODLE->get_course_themes($URI[1]);
+            $DATA = $MOODLE->get_course_themes($URI[1]);
             view('themes');
         break;
 
         case 'test':
             global $TEST;
-            if (!$URI[1]) header("location: /user/{$USER->id}/courses/");
-            $link = $MOODLE->get_theme_test_link($URI[1]);
-            preg_match('/review\.php\?attempt=(\d+)/', $link, $id_match);
-            $TEST = $MOODLE->get_test_data($id_match[1]);
+            $TEST = $MOODLE->get_test_data($URI[1]);
             view('test');
         break;
 
@@ -130,6 +129,7 @@ function get_correct_answers() {
     $users = User::all();
     $result = []; // все полезные ответы в формате ответа $moodle->get_test_data(<id>)
     $required_answers = []; // список ID вопросов без максимальной оценки
+	$title = '';
 
     foreach ($users as $u) {
 
@@ -139,10 +139,10 @@ function get_correct_answers() {
         list('user' => $u, 'moodle' => $moodle) = $data;
 
         // Получение ответов на тест текущего пользователя ($curr_test)
-        $test_link = $moodle->get_theme_test_link($URI[1]);
-        preg_match('/review\.php\?attempt=(\d+)/', $test_link, $id_match);
-        if (!$id_match) continue;
-        $curr_test = $moodle->get_test_data($id_match[1]);
+        list(
+			'title' => $title,
+			'questions' => $curr_test
+		) = $moodle->get_test_data($URI[1]);
 
         // Первый проход: заполнение $result и $required_answers
         if (!$result) {
@@ -178,5 +178,8 @@ function get_correct_answers() {
         if (!count($required_answers)) break;
     }
 
-    return $result;
+    return [
+		'title' => $title,
+		'questions' => $result
+	];
 }

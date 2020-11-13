@@ -127,16 +127,23 @@ class Moodle
     public function get_course_themes(int $course_id): array {
         $body = $this->http('GET', 'http://moodle.dahluniver.ru/grade/report/user/index.php?id=' . $course_id)->body;
         $rows = str_get_html($body)->find('table tbody tr');
-        $data = array();
+        $data = array('TASKS' => [], 'TESTS' => []);
+
         foreach ($rows as $row) {
+
             $img = $row->find('th a img', 0);
-            if (!$img || mb_strtolower($img->alt) !== 'тест') continue;
+			if (!$img) continue;
+
+            $img_alt = mb_strtolower($img->alt);
+            if (!in_array($img_alt, ['тест', 'задание'])) continue;
+
             $link = $row->find('th a', 0);
             $percentage = floatval(preg_replace(['/[^\d,]/', '/,/'], ['', '.'], $row->find('td.column-percentage', 0)->plaintext));
             $grade = floatval(preg_replace(['/[^\d,]/', '/,/'], ['', '.'], $row->find('td.column-grade', 0)->plaintext));
             $range = $row->find('td.column-range', 0)->plaintext;
             preg_match('/\Wid=(\d+)/', $link->href, $id_match);
-            $data[] = [
+            $section = $img_alt == 'тест' ? 'TESTS' : 'TASKS';
+            $data[$section][] = [
                 'id' => intval($id_match[1]),
                 'title' => $link->plaintext,
                 'href' => $link->href,
@@ -149,27 +156,31 @@ class Moodle
     }
 
     /**
-     * Получение ссылки на результаты теста
+     * Проверка, выполнен ли тест у пользователя
      *
-     * @param integer $test_id      ID теста
-     * @return mixed                Ссылка на результаты теста или false, если тест не выполнен
+     * @param  integer  $id  ID теста
+     * @return boolean       true - выполнен, false - не выполнен
      */
-    public function get_theme_test_link(int $test_id): string {
-        $body = $this->http('GET', 'http://moodle.dahluniver.ru/mod/quiz/view.php?id=' . $test_id)->body;
-        $link = str_get_html($body)->find('table a', 0);
-        $href = $link ? $link->href : false;
-        return $href;
+	public function check_complete_test(int $id): bool {
+		$body = $this->http('GET', 'http://moodle.dahluniver.ru/mod/quiz/view.php?id=' . $id)->body;
+		$is_complete = (bool) str_get_html($body)->find('table a', 0);
+		return $is_complete;
     }
 
     /**
-     * Возвращает массив со свойствами вопросов и выбранными ответами
+     * Возвращает массив с названием теста, свойствами вопросов и выбранными ответами
      *
-     * @param integer $attempt  ID теста
-     * @param integer $cmid     Ещё какой-то ID
+     * @param integer $id       ID темы
      * @return array            Массив со свойствами вопросов и выбранными ответами
      */
-    public function get_test_data(int $attempt, int $cmid = 0): array {
-        $url = 'http://moodle.dahluniver.ru/mod/quiz/review.php?attempt=' . $attempt . ($cmid !== 0 ? "&cmid={$cmid}" : '');
+    public function get_test_data(int $id): array {
+		list('id' => $test_id, 'title' => $title) = $this->get_theme_test_redirect($id);
+		if ($test_id === false) return [
+			'title' => $title,
+			'questions' => [],
+		];
+
+        $url = 'http://moodle.dahluniver.ru/mod/quiz/review.php?attempt=' . $test_id;
         $body = $this->http('GET', $url)->body;
 
         $result = [];
@@ -222,7 +233,34 @@ class Moodle
             ];
         }
 
-        return $result;
+        return [
+			'title' => $title,
+			'questions' => $result,
+		];
+    }
+
+    /**
+     * Получение ID теста и название темы
+     *
+     * @param integer $test_id      ID темы
+     * @return mixed                Ссылка на результаты теста или false, если тест не выполнен
+     */
+    private function get_theme_test_redirect(int $test_id): array {
+        $body = $this->http('GET', 'http://moodle.dahluniver.ru/mod/quiz/view.php?id=' . $test_id)->body;
+		$dom = str_get_html($body);
+		$dom_title = $dom->find('h2', 0);
+		$title = $dom_title ? trim($dom_title->plaintext) : '';
+        $id = $dom->find('table a', 0);
+		if ($id) {
+			preg_match('/review\.php\?attempt=(\d+)/', $id, $id_match);
+			$id = isset($id_match[1]) ? $id_match[1] : false;
+		} else {
+			$id = false;
+		}
+        return [
+			'id' => $id,
+			'title' => $title,
+		];
     }
 
     /**

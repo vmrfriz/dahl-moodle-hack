@@ -1,7 +1,14 @@
 <? global $USER, $MOODLE, $TEST, $URI ?>
 
+<h1 class="h3 font-weight-normal mb-4 text-center">
+	<?=$TEST['title'] ?>
+</h1>
+
 <? if (strpos($_SERVER['REQUEST_URI'], '/user/') === 0): ?>
-<h2><span class="h4">Результаты теста:</span><br><?=$USER->name ?></h2>
+<h2 class="h3 font-weight-normal">
+	<span class="h5 d-block mb-0">Результаты теста:</span>
+	<?=$USER->name ?>
+</h2>
 <div class="mb-4">
     <a href="/test/<?=$URI[3] ?>">Выборка <span class="badge badge-success">правильных</span> ответов со всех аккаунтов</a>
 </div>
@@ -18,7 +25,7 @@
         </tr>
     </thead>
     <tbody>
-    <? foreach ($TEST as $i => $t): ?>
+    <? foreach ($TEST['questions'] as $i => $t): ?>
     <? if ($t['is_answered']): ?>
         <tr<? if ($t['grade'] === $t['grade_max']): ?> class="bg-success"<? endif ?>>
             <td><?=$t['question'] ?></td>
