@@ -1,4 +1,7 @@
 RewriteEngine On
+
+php_value short_open_tag 1
+
 # RewriteRule .*\.(css,js,jpg,png,svg)
 RewriteRule .*\/$ index.php [L,QSA]
 RewriteRule .*\.php$ index.php [L,QSA]
