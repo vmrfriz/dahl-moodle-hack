@@ -26,3 +26,7 @@
     <?php endforeach ?>
     </tbody>
 </table>
+
+<div class="my-4">
+    <a href="/user/<?=$USER->id ?>/courses" class="btn btn-sm btn-outline-secondary pr-4">&larr; &nbsp; Курсы</a>
+</div>

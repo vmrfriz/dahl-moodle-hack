@@ -6,5 +6,5 @@ include('themes-tasks.php');
 ?>
 
 <div class="my-4">
-    <a href="/user/<?=$USER->id ?>/courses" class="btn btn-primary">&laquo; Курсы</a>
+    <a href="/user/<?=$USER->id ?>/courses" class="btn btn-sm btn-outline-secondary pr-4">&larr; &nbsp; Курсы</a>
 </div>

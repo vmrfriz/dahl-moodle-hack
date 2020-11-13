@@ -1,6 +1,7 @@
+<? global $DATA, $USER, $MOODLE; ?>
 <? if ($DATA['TASKS']): ?>
-<details open>
-	<summary class="display-4">Задания</summary>
+<details>
+	<summary class="h3 font-weight-normal mb-3" style="list-style-type:'&#9776;  '">Задания</summary>
 	<table class="table bg-light">
 		<thead>
 			<tr>

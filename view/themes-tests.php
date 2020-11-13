@@ -1,7 +1,7 @@
 <? global $DATA, $USER, $MOODLE; ?>
 <? if ($DATA['TESTS']): ?>
-<details open>
-	<summary class="display-4">Тесты</summary>
+<details>
+	<summary class="h3 font-weight-normal mb-3" style="list-style-type:'&#9776;  '">Тесты</summary>
 	<table class="table bg-light">
 		<thead>
 			<tr>
