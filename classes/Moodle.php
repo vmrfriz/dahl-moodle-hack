@@ -191,6 +191,7 @@ class Moodle
             $question_classes = $question->class;
             $is_answered = strpos($question_classes, 'notanswered') === false;
             $is_multiple = strpos($question_classes, 'multichoice') !== false;
+            $is_essay = strpos($question_classes, 'essay') !== false;
             $is_match = strpos($question_classes, 'match') !== false;
 
             $sGrade = $question->find('div.info div.grade', 0)->plaintext;
@@ -204,18 +205,20 @@ class Moodle
                 )
             );
 
-            $question_text = trim($question->find('div.content div.qtext', 0)->plaintext);
+            $question_text = trim($question->find('div.content div.qtext', 0)->innertext);
 
             $selected_answers = [];
             $selector = 'div.ablock .answer ' . ($is_match ? 'tr' : 'div');
             $answers = $question->find($selector);
             foreach ($answers as $answer) {
                 if ($is_match) {
-                    $selected_answers[] = trim($answer->find('td', 0)->plaintext) . ' = ' .
-                        trim($answer->find('select option[selected]', 0)->plaintext);
+                    $selected_answers[] = trim($answer->find('td', 0)->innertext) . ' = ' .
+                        trim($answer->find('select option[selected]', 0)->innertext);
+                } else if ($is_essay) {
+                    $selected_answers[] = trim($answer->innertext);
                 } else {
                     if ($answer->find('input', 0)->checked) {
-                        $selected_answers[] = trim($answer->plaintext);
+                        $selected_answers[] = trim($answer->innertext);
                     }
                 }
             }
@@ -226,6 +229,7 @@ class Moodle
                 'is_answered' => $is_answered,
                 'is_multiple' => $is_multiple,
                 'is_match'    => $is_match,
+                'is_essay'    => $is_essay,
                 'grade'       => ($is_answered ? floatval($aGrade[0]) : 0),
                 'grade_max'   => floatval(end($aGrade)),
                 'question'    => $question_text,
