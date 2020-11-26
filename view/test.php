@@ -32,6 +32,10 @@
 </table>
 
 <div class="my-4">
+<? if ($USER->id ?? false): ?>
     <a href="/user/<?=$USER->id ?>/courses" class="btn btn-sm btn-outline-secondary pr-4">&larr; &nbsp; Курсы</a>
     <a href="/test/<?=$URI[3] ?>" class="btn btn-sm btn-outline-success ml-2" title="Поиск во всех аккаунтах">&#10004; Все верные</a>
+<? else: ?>
+    <a href="/" onclick="window.history.back();return false" class="btn btn-sm btn-outline-secondary pr-4">&larr; &nbsp; Назад</a>
+<? endif; ?>
 </div>

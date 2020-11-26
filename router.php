@@ -18,8 +18,10 @@ if (Cache::isActualCache($uri)) {
 if (Moodle::isDown()) {
     if (Cache::isCached($uri))
         die(Cache::get($uri));
-    else
+    else {
+        define('TITLE', ':(');
         die(view('down'));
+    }
 }
 
 switch ($URI[0] ?? false) {
@@ -38,6 +40,7 @@ switch ($URI[0] ?? false) {
         $USER = User::id($URI[1]);
         include('login.php');
         Cache::clear('/');
+        define('TITLE', $USER->name);
         view('login');
     break;
 
@@ -55,6 +58,7 @@ switch ($URI[0] ?? false) {
         $cache = Cache::start();
         if (!$URI[1]) header("location: " . ($_SERVER['HTTP_REFERER'] ?: '/'));
         $TEST = get_correct_answers();
+        define('TITLE', $TEST['title']);
         view('test');
         $cache->save();
     break;
@@ -108,6 +112,7 @@ switch ($URI[0] ?? false) {
             header('location: /');
         $cache = Cache::start(300);
         $USERS = User::all();
+        define('TITLE', 'Пользователи');
         view('index');
         $cache->save();
     break;
@@ -124,6 +129,7 @@ function user_methods($URI) {
         case 'courses':
             global $COURSES;
             $COURSES = $MOODLE->get_courses();
+            define('TITLE', $COURSES['title'] ?? '');
             view('courses');
         break;
 
@@ -131,18 +137,21 @@ function user_methods($URI) {
             global $DATA, $cache;
             $cache->expires(3600);
             $DATA = $MOODLE->get_course_themes($URI[1]);
+            define('TITLE', $DATA['title'] ?? '');
             view('themes');
         break;
 
         case 'test':
             global $TEST;
             $TEST = $MOODLE->get_test_data($URI[1]);
+            define('TITLE', $TEST['title'] ?? '');
             view('test');
         break;
 
         case 'task':
             global $TASK;
             $TASK = $MOODLE->get_task_data($URI[1]);
+            define('TITLE', $TASK['title'] ?? '');
             view('task');
         break;
 
