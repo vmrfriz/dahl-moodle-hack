@@ -28,5 +28,5 @@
 
 <div class="my-4">
     <a href="/user/<?=$USER->id ?>/courses" class="btn btn-sm btn-outline-secondary pr-4">&larr; &nbsp; Курсы</a>
-    <a href="/task/<?=$URI[3] ?>" class="btn btn-sm btn-outline-success ml-2" title="Поиск во всех аккаунтах">&#10004; Все выполненные</a>
+    <a href="/task/<?=$URI[3] ?>" class="btn btn-sm btn-outline-success ml-2" title="Поиск во всех аккаунтах" onclick="this.remove()">&#10004; Все выполненные</a>
 </div>

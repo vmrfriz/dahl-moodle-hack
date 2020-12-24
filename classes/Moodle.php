@@ -170,22 +170,43 @@ class Moodle
     /**
      * Возвращает массив с названием теста, свойствами вопросов и выбранными ответами
      *
-     * @param integer $id       ID темы
-     * @return array            Массив со свойствами вопросов и выбранными ответами
+     * @param integer      $id       ID темы
+     * @return array|bool            Массив со свойствами вопросов и выбранными ответами или false, если просрочена авторизация
      */
     public function get_test_data(int $id): array {
+        /**
+         * - Получение названия и ID теста по ID темы
+         * - Чтение содержимого теста
+         */
 		list('id' => $test_id, 'title' => $title) = $this->get_theme_test_redirect($id);
 		if ($test_id === false) return [
 			'title' => $title,
 			'questions' => [],
 		];
-
         $url = 'http://moodle.dahluniver.ru/mod/quiz/review.php?attempt=' . $test_id;
         $body = $this->http('GET', $url)->body;
 
+        // Проверка авторизации
+        if (strpos($body, 'logout.php') === false) {
+            return false;
+        }
+
+        /**
+         * Обработка вопросов-ответов
+         *
+         * @link https://simplehtmldom.sourceforge.io/manual.htm PHP Simple HTML DOM Parser
+         */
         $result = [];
         $questions = str_get_html($body)->find('form.questionflagsaveform div.que');
         foreach ($questions as $question) {
+
+            /**
+             * Чтение свойств вопроса теста:
+             * - есть ли ответ?
+             * - может ли быть несколько верных ответов?
+             * - это совпадение утверждений с выпадающими списками?
+             * - это эссе?
+             */
             $question_id = $question->id;
             $question_order = trim(strrchr($question_id, '-'), '- ');
             $question_classes = $question->class;
@@ -194,6 +215,13 @@ class Moodle
             $is_essay = strpos($question_classes, 'essay') !== false;
             $is_match = strpos($question_classes, 'match') !== false;
 
+            /**
+             * @var array $aGrade Выборка оценки за ответ
+             * - максимум 2 элемента в массиве типа integer
+             * - текущая оценка только если is_answered = true
+             * - максимальная возможная оценка всегда под последним индексом в массиве
+             */
+            $aGrade = [];
             $sGrade = $question->find('div.info div.grade', 0)->plaintext;
             $sGrade = str_replace(',', '.', $sGrade);
             $aGrade = array_values(
@@ -205,12 +233,21 @@ class Moodle
                 )
             );
 
+            // Текст вопроса
             $question_text = trim($question->find('div.content div.qtext', 0)->innertext);
 
+            /**
+             * Чтение вопроса в зависимости от типа:
+             * * is_match - select
+             * * is_essay - textarea
+             * *    иначе - radio box || check box
+             */
             $selected_answers = [];
             $selector = 'div.ablock .answer ' . ($is_match ? 'tr' : 'div');
             $answers = $question->find($selector);
+            $count_answers = 0;
             foreach ($answers as $answer) {
+                $count_answers++;
                 if ($is_match) {
                     $selected_answers[] = trim($answer->find('td', 0)->innertext) . ' = ' .
                         trim($answer->find('select option[selected]', 0)->innertext);
@@ -222,7 +259,14 @@ class Moodle
                     }
                 }
             }
+            // if ($is_match) $count_selector = 'select';
+            // else $count_selector = 'input';
+            // $count_answers = $is_essay ? 1 : count($answers->find($count_selector));
 
+            /**
+             * Добавление результата обработки вопроса теста
+             * в результирующий массив
+             */
             $result[md5($question_text)] = [
                 'id'          => $question_id,
                 'order'       => $question_order,
@@ -233,6 +277,7 @@ class Moodle
                 'grade'       => ($is_answered ? floatval($aGrade[0]) : 0),
                 'grade_max'   => floatval(end($aGrade)),
                 'question'    => $question_text,
+                'answers_count' => $count_answers,
                 'selected_answers' => $selected_answers,
             ];
         }

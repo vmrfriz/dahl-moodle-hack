@@ -16,7 +16,7 @@
 		<?php foreach ($DATA['TASKS'] as $item): ?>
 			<tr>
 				<td>
-				<?php if ($item['grade'] != 0): ?>
+				<? if ($item['grade'] != 0): ?>
 					<a href="/user/<?=$USER->id ?>/task/<?=$item['id'] ?>/">
 						<?=$item['title'] ?>
 					</a>
@@ -28,7 +28,7 @@
 				<td class="text-right"><?=$item['range'] ?></td>
 				<td class="text-right"><?=intval($item['percentage']) ?>%</td>
 				<td class="text-right">
-					<a href="/task/<?=$item['id'] ?>" class="btn btn-sm btn-outline-success" title="Поиск во всех аккаунтах">&#10004;</a>
+					<a href="/task/<?=$item['id'] ?>" class="btn btn-sm btn-outline-success" title="Поиск во всех аккаунтах" onclick="this.remove()">&#10004;</a>
 				</td>
 			</tr>
 		<?php endforeach ?>

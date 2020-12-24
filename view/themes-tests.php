@@ -16,7 +16,7 @@
 		<?php foreach ($DATA['TESTS'] as $item): ?>
 			<tr>
 				<td>
-				<?php if ($item['grade'] != 0): ?>
+				<? if ($item['grade'] != 0): ?>
 					<a href="/user/<?=$USER->id ?>/test/<?=$item['id'] ?>/">
 						<?=$item['title'] ?>
 					</a>
@@ -28,8 +28,8 @@
 				<td class="text-right"><?=$item['range'] ?></td>
 				<td class="text-right"><?=intval($item['percentage']) ?>%</td>
 				<td class="text-right">
-					<a href="/test/<?=$item['id'] ?>" class="btn btn-sm btn-outline-success" title="Лучшие ответы">&#10004;</a>
-					<a href="/completed-tests/<?=$item['id'] ?>" class="btn btn-sm btn-outline-secondary ml-1" title="Найти выполненные">&#128270;</a>
+					<a href="/test/<?=$item['id'] ?>" class="btn btn-sm btn-outline-success" onclick="this.remove()" title="Лучшие ответы">&#10004;</a>
+					<a href="/completed-tests/<?=$item['id'] ?>" class="btn btn-sm btn-outline-secondary ml-1" onclick="this.remove()" title="Найти выполненные">&#128270;</a>
 				</td>
 			</tr>
 		<?php endforeach ?>

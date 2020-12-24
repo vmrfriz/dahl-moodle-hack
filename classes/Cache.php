@@ -21,6 +21,8 @@ class Cache
         }
     }
 
+    // FIXME: Пишет время кэша 50 лет назад (1 по unix timestamp),
+    //        при этом не выводит тело страницы
     public function save() {
         global $dbh;
         $html = ob_get_clean();
@@ -96,7 +98,12 @@ class Cache
         $stmt->execute([$hash]);
         $created_at = (int) $stmt->fetch(\PDO::FETCH_ASSOC)['created_at'];
         $created_at = Carbon::now()->locale('ru')->longAbsoluteDiffForHumans(new Carbon($created_at));
-        $cache_btn = '<a href="/clearcache/?page='. $_SERVER['REQUEST_URI'] .'" class="btn btn-sm btn-outline-secondary" title="Страница выглядела так '. $created_at .' назад. Нажмите, чтобы обновить">&#8635; '. $created_at .' назад</a>';
+        $cache_btn = '<a
+            href="/clearcache/?page='. $_SERVER['REQUEST_URI'] .'"
+            class="btn btn-sm btn-outline-secondary"
+            title="Страница выглядела так '. $created_at .' назад. Нажмите, чтобы обновить"
+            onclick="this.remove()"
+        >&#8635; '. $created_at .' назад</a>';
         $html = '<!-- from cache -->' . str_replace('<!-- [cached] -->', $cache_btn, $html);
         return $html;
     }

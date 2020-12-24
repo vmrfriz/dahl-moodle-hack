@@ -170,16 +170,66 @@ function get_correct_answers() {
     global $URI;
 
     $users = User::all();
-    $result = []; // все полезные ответы в формате ответа $moodle->get_test_data(<id>)
-    $required_answers = []; // список ID вопросов без максимальной оценки
+    /**
+     * @var array $best_answers Все полезные ответы
+     * array(
+     *   'md5(Вопрос теста)' => array(
+     *     'id'               => (string) ID вопроса
+     *     'order'            => (int) Порядковый номер вопроса
+     *     'is_answered'      => (bool) Есть ответ
+     *     'is_multiple'      => (bool) Возможно несколько ответов (checkbox)
+     *     'is_match'         => (bool) Это совпадения <select>
+     *     'is_essay'         => (bool) Это эссе <textarea>
+     *     'grade'            => (int) Оценка за текущий ответ
+     *     'grade_max'        => (int) Максимальная оценка за текущий ответ
+     *     'question'         => (string) Текст вопроса
+     *     'selected_answers' => (array) Массив ответов
+     *   ),
+     *   'md5(Вопрос теста2)' => array(
+     *     ...
+     *   )
+     * )
+     */
+    $best_answers = [];
+
+    /**
+     * @var array Массив вопросов, на которые ещё нет 100% верных ответов
+     * array(
+     *   'md5(Вопрос теста)' => array(
+     *     'id пользователя' => array(
+     *       'id'               => (string) ID вопроса
+     *       'order'            => (int) Порядковый номер вопроса
+     *       'is_answered'      => (bool) Есть ответ
+     *       'is_multiple'      => (bool) Возможно несколько ответов (checkbox)
+     *       'is_match'         => (bool) Это совпадения <select>
+     *       'is_essay'         => (bool) Это эссе <textarea>
+     *       'grade'            => (int) Оценка за текущий ответ
+     *       'grade_max'        => (int) Максимальная оценка за текущий ответ
+     *       'question'         => (string) Текст вопроса
+     *       'selected_answers' => (array) Массив ответов
+     *     ),
+     *     'id пользователя2' => array(
+     *       ...
+     *     ),
+     *   )
+     * )
+     */
+    $wrong_answers = []; // список ID вопросов без максимальной оценки
+
+    // Название теста
 	$title = '';
 
+    /**
+     * Сбор результатов теста у всех пользователей
+     */
     foreach ($users as $u) {
 
         // Получение рабочего экземпляра Moodle для текущего пользователя
         $data = helper_get_moodle_user($u);
         if (!$data) continue;
         list('user' => $u, 'moodle' => $moodle) = $data;
+        // if (!$u['active']) continue;
+        // $moodle = new App\Moodle($u['token']);
 
         // Получение ответов на тест текущего пользователя ($curr_test)
         list(
@@ -187,42 +237,138 @@ function get_correct_answers() {
 			'questions' => $curr_test
 		) = $moodle->get_test_data($URI[1]);
 
-        // Первый проход: заполнение $result и $required_answers
-        if (!$result) {
-            $result = $curr_test;
-            foreach ($result as $ans_id => $ans_data) {
+        // Первый проход: заполнение $best_answers и $wrong_answers
+        if ($best_answers === []) {
+            $best_answers = $curr_test;
+            foreach ($best_answers as $ans_id => $ans_data) {
                 if ($ans_data['grade'] === $ans_data['grade_max'])
                     continue;
-                $required_answers[] = $ans_id;
+                if (!is_array($wrong_answers[$ans_id] ?? false))
+                    $wrong_answers[$ans_id] = [];
+                $wrong_answers[$ans_id][ $u['id'] ] = $ans_data['selected_answers'];
             }
             continue;
         }
 
-        // Выборка недостающих правильных ответов
-        $new_keys = array_keys(array_diff_key($curr_test, $result));
-        $required_answers = array_merge($required_answers, $new_keys);
-        foreach ($required_answers as $index => $ans_id) {
-            if (!isset($result[$ans_id]) && isset($curr_test[$ans_id])) {
-                $result[$ans_id] = $curr_test[$ans_id];
-                if ($curr_test[$ans_id]['grade'] === $curr_test[$ans_id]['grade_max'])
-                    unset($required_answers[$index]);
-                continue;
-            }
-
-            if (!isset($curr_test[$ans_id])) continue;
-
-            if (($curr_test[$ans_id]['grade'] ?? 0) > ($result[$ans_id]['grade'] ?? 0)) {
-                $result[$ans_id] = $curr_test[$ans_id];
-                if ($curr_test[$ans_id]['grade'] === $curr_test[$ans_id]['grade_max'])
-                    unset($required_answers[$index]);
+        /**
+         * Если у текущего пользователя есть вопросы, которых ещё нет в списке,
+         * проверяем их правильность и добавляем в $best_answers и $wrong_answers
+         */
+        $new_keys = array_keys(array_diff_key($curr_test, $best_answers));
+        foreach ($new_keys as $new_key) {
+            $best_answers[$new_key] = $curr_test[$new_key];
+            if ($curr_test[$new_key]['grade'] !== $curr_test[$new_key]['grade_max']) {
+                $wrong_answers[$ans_id][ $u['id'] ] = $curr_test[$new_key];
             }
         }
 
-        if (!count($required_answers)) break;
+        /**
+         * Ищем лучшие ответы, чем содержатся во $wrong_answers
+         */
+        if ($wrong_answers)
+        foreach ($wrong_answers as $ans_id => $ans_data) {
+            $curr = &$curr_test[$ans_id] ?? false;
+            $best = &$best_answers[$ans_id];
+
+            if (!$curr) continue;
+            if (($best['grade'] ?? 0) === ($best['grade_max'] ?? 0)) continue;
+            if (($curr['grade'] ?? 0) === ($curr['grade_max'] ?? 0)) {
+                $best = $curr;
+                unset($wrong_answers[$ans_id]);
+                continue;
+            }
+            if (($curr['grade'] ?? 0) > ($best['grade'] ?? 0)) {
+                $best = $curr;
+            }
+
+            $wrong_answers[$ans_id][ $u['id'] ] = $curr;
+        }
+    }
+
+    /**
+     * @var array Список неправильных ответов с вероятностью неправильности
+     */
+    $exactly_wrong = [];
+    foreach ($wrong_answers as $ans_id => $users) {
+
+        /** @var int Количество правильных ответов в тесте */
+        $correct_count = 0;
+        /** @var int Точность определения количества правильных ответов в тесте в процентах */
+        $exactly_correct = 0;
+
+        foreach ($users as $user_id => $ans_data) {
+
+            // Пропускаем эссе
+            if ($ans_data['is_essay']) {
+                unset($wrong_answers[$ans_id]);
+                break;
+            }
+
+            // Удаляем ответ пользователя из очереди, если его ответ пуст
+            if (($ans_data['answered'] ?? false) === false) {
+                unset($users[$user_id]);
+                continue;
+            }
+
+            // Заполняем точно неправильный ответ, если к этому вопросу он пуст
+            if (!($exactly_wrong[$ans_id] ?? true)) {
+                $exactly_wrong[$ans_id] = $ans_data;
+                $exactly_wrong[$ans_id]['wrong_answers'] = [];
+                unset($exactly_wrong[$ans_id]['selected_answers']);
+            }
+
+            $answers = &$ans_data['selected_answers'];
+            $count = count($answers);
+            $exactly_wrong_answers = &$exactly_wrong[$ans_id]['wrong_answers'];
+
+            // Ответы <select>
+            if ($ans_data['is_match']) {
+
+
+            // Ответы checkbox
+            } else if ($ans_data['is_multiple']) {
+                if ($ans_data['grade'] === 0) {
+                    // Добавить все ответы в точно неверные
+                    foreach ($answers as $answer) {
+                        $exactly_wrong_answer = array(
+                            'answer' => $answer,
+                            'chance' => 0
+                        );
+                        $ans_hash = md5($answer);
+                        if (!isset($exactly_wrong_answers[$ans_hash])) {
+                            $exactly_wrong_answers[$ans_hash] = $exactly_wrong_answer;
+                        }
+                    }
+                }
+
+                if (
+                    $exactly_correct < 100 &&
+                    $count === 1 &&
+                    $ans_data['grade'] > 0
+                ) {
+                    $correct_count = round($ans_data['grade_max'] / $ans_data['grade']);
+                    $exactly_correct = 100;
+                }
+
+
+            // Ответы radio
+            } else {
+                $exactly_wrong_answer = array(
+                    'answer' => $answers[0],
+                    'chance' => 0
+                );
+                $ans_hash = md5($answers[0]);
+                if (!isset($exactly_wrong_answers[$ans_hash])) {
+                    $exactly_wrong_answers[$ans_hash] = $exactly_wrong_answer;
+                }
+            }
+        }
+        if ($wrong_answers[$ans_id] ?? false) break;
     }
 
     return [
 		'title' => $title,
-		'questions' => $result
+        'questions' => $best_answers,
+        'wrong' => $exactly_wrong
 	];
 }

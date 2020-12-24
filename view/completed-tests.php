@@ -1,4 +1,4 @@
-<?php global $title, $users_complete_test, $URI; ?>
+<?php global $users_complete_test, $URI; ?>
 
 <h1 class="h3 font-weight-normal mb-4">
 	<?=$title ?>
@@ -7,7 +7,7 @@
 <? if ($users_complete_test): ?>
 <h2>
     Тест выполнили
-    <a href="/test/<?=$URI[1] ?>" class="btn btn-sm btn-outline-success" title="Лучшие ответы">&#10004;</a>
+    <a href="/test/<?=$URI[1] ?>" class="btn btn-sm btn-outline-success" title="Лучшие ответы" onclick="this.remove()">&#10004;</a>
 </h2>
 
 <div class="row">
