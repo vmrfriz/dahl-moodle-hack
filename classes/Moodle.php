@@ -183,7 +183,7 @@ class Moodle
 			'title' => $title,
 			'questions' => [],
 		];
-        $url = 'http://moodle.dahluniver.ru/mod/quiz/review.php?attempt=' . $test_id;
+        $url = 'http://moodle.dahluniver.ru/mod/quiz/review.php?attempt=' . $test_id . '&showall=1';
         $body = $this->http('GET', $url)->body;
 
         // Проверка авторизации
